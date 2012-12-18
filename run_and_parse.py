@@ -1,4 +1,4 @@
-from cloudy_utils import calc_uvb, calc_local_jnu, read_starburst99
+from .utils import calc_uvb, calc_local_jnu, read_starburst99
 
 from barak.utilities import adict, between
 from barak.constants import Ryd, Ryd_Ang, pi, hplanck
@@ -308,7 +308,7 @@ def parse_abundances(i, rows):
     Returns
     -------
     i : int
-      Row index of th eline following the abundance list
+      Row index of the line following the abundance list
     abun : record array
       Array giving the elements and log10(abundance) relative to H.
     """
@@ -340,6 +340,7 @@ def parse_output(filename):
     nH:        log10 total hydrogen density (cm^-3).
     N:         log10 column density (cm^-2) per atom and ion. Ordered
                lowest to highest ionisation level.
+    Nex:       log10 column density (cm^-2) for excited states.
     U:         log10 ionisation parameter (dimensionless).
     Tgas:      log10 gas temperature (K) for HI and HII.
     NHI:       Cloudy stopped once this log10 NHI (cm^-2) was reached.
@@ -454,7 +455,6 @@ def parse_output(filename):
         if i == len(rows):
             return out
 
-
     N = OrderedDict()
     while rows[i].strip() != '' and not rows[i].startswith(' Exc state'):
         r = rows[i]
@@ -485,7 +485,7 @@ def parse_output(filename):
     vals += [row[j:j+14] for j in range(0, len(row), 14)]
     #print vals
 
-    out['Nex'] = dict((v[:4],float(v[4:])) for v in vals)
+    out['Nex'] = dict((v[:4], float(v[4:])) for v in vals)
     #print repr(out['Nex'])
     while 'Log10 Mean Temperature (over radius)' not in rows[i]:
         i += 1
@@ -512,54 +512,65 @@ def parse_grid(cfg, outdir='output/'):
     cont = np.rec.fromarrays([energy[isort], fnu[isort]], names='ryd,fnu')   
         
     # combine into large arrays
-    keys = 'N Nex U Tgas Tstop filename gas_abun dust_abun'.split()
-    grid = dict((k, []) for k in keys)
+
+    grid = {}
     grid['cont'] = cont
     grid['NHI'] = cfg.logNHI
     grid['nH'] = cfg.lognH
     grid['Z'] = cfg.logZ
     grid['redshift'] = cfg.z
 
+    # initialise keys that will contain one or more values for each
+    # model.
     grid['N'] = OrderedDict()
     for atom in models[0]['N']:
         grid['N'][atom] = []
 
     grid['Nex'] = OrderedDict()
     for trans in models[0]['Nex']:
-        grid['Nex'][trans] = [] 
+        grid['Nex'][trans] = []
 
     for key in ('gas_abun', 'dust_abun'):
         grid[key] = OrderedDict()
         for atom in models[0][key]:
             grid[key][atom] = []
 
+    keys = 'N Nex U Tgas Tstop filename gas_abun dust_abun'.split()
+    for k in keys:
+        grid[k] = []
+
+    # initialisation finished, now copy the values from each model.
+
     for model in models:
-        for key in keys:
-            if key not in ('N', 'Nex', 'gas_abun', 'dust_abun'):
-                try:
-                    grid[key].append(model[key])
-                except:
-                    import pdb; pdb.set_trace()
-            else:
-                for atom in model[key]:
-                    grid[key][atom].append(model[key][atom])
+        for key in ('U', 'Tgas', 'Tstop', 'filename'):
+            try:
+                grid[key].append(model[key])
+            except:
+                import pdb; pdb.set_trace()
+
+        for key in ('N', 'Nex', 'gas_abun', 'dust_abun'):
+            for atom in model[key]:
+                grid[key][atom].append(model[key][atom])
+
+    # finally convert lists to arrays and reshape to multiple dimensions.
 
     nNHI = len(cfg.logNHI)
     nnH = len(cfg.lognH)
     nZ = len(cfg.logZ)
-    for key in keys:
-        if key not in ('N', 'Nex', 'Tgas', 'gas_abun', 'dust_abun'):
-            grid[key] = np.array(grid[key]).reshape(nNHI, nnH, nZ)
-        elif key == 'Tgas':
-            grid[key] = np.array(grid[key]).reshape(nNHI, nnH, nZ, -1)
-        elif key in ('N', 'gas_abun', 'dust_abun'):
-            for atom in grid[key]:
-                grid[key][atom] = np.array(grid[key][atom]).reshape(
-                    nNHI, nnH, nZ, -1)
-        elif key == 'Nex':
-            for trans in grid[key]:
-                grid[key][trans] = np.array(grid[key][trans]).reshape(
-                    nNHI, nnH, nZ)
+
+    for key in ('Tstop', 'filename'):
+        grid[key] = np.array(grid[key]).reshape(nNHI, nnH, nZ)
+
+    for key in ('N', 'gas_abun', 'dust_abun'):
+        for atom in grid[key]:
+            grid[key][atom] = np.array(grid[key][atom]).reshape(
+                nNHI, nnH, nZ, -1)
+
+    key = 'Tgas'
+    grid[key] = np.array(grid[key]).reshape(nNHI, nnH, nZ, -1)
+    key = 'Nex'
+    for trans in grid[key]:
+        grid[key][trans] = np.array(grid[key][trans]).reshape(nNHI, nnH, nZ)
 
     # U values only vary with nH, so we don't need to keep a big grid
     # of them.
@@ -577,7 +588,6 @@ def parse_grid(cfg, outdir='output/'):
             if val.ndim == 0:
                 val = float(val)
             grid[key][atom] = val
-
 
     grid['help'] = """\
 cont:      Total incident continuum Fnu (ergs/cm^2/s/Hz), output by
