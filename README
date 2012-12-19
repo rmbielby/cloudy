@@ -1,10 +1,8 @@
 Run grids of models using the spectral synthesis code Cloudy, taking advantage of multiple cores, and then parse the output.
 
-example:
+Example
+-------
 
-copy cloudy.py and cloudy_util.py to the directory where you want to run the grid from, and then do:
+copy this directory to somewhere that your PYTHONPATH variable points to, and then add the scripts/ directory to your PATH. Run a Cloudy grid with
 
-   python cloudy.py
-
-Note you also need a CUBA Haardt-Madau background file.
-
+  run_cloudy_grid

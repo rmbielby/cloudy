@@ -1,7 +1,9 @@
-from barak.io import parse_config
+from barak.io import parse_config, readtxt
 from scipy.integrate import simps
 import numpy as np
 from barak.constants import Ryd_Ang, pi, hplanck
+
+import os
 
 def get_data_path():
     """ Return the path to the data directory for this package.
@@ -106,7 +108,10 @@ def calc_uvb(redshift, cuba_name, match_fg=False):
     =======  ====================================================
     """
 
-    redshifts, wave, jnu_z = read_cuba(cuba_name)
+    if cuba_name.endswith('UVB.out'):
+        redshifts, wave, jnu_z = read_cuba(cuba_name)
+    else:
+        redshifts, wave, jnu_z = read_XIDL_cuba(cuba_name)
     jnu0 = interp_cuba_to_z(redshift, redshifts, jnu_z)
     energy0 = Ryd_Ang / wave  # ergs
     isort = energy0.argsort()
@@ -197,9 +202,11 @@ def read_starburst99(filename):
     return wa, F
     
 
-def read_cuba(filename):
-    """ Parse a Haart & Madau CUBA file, return jnu as a function of
-    wavelength and redshift. Removes duplicate wavelength points.
+def read_XIDL_cuba(filename):
+    """ Parse a Haart & Madau CUBA file as given in XIDL.
+
+    return jnu as a function of wavelength and redshift. Removes
+    duplicate wavelength points.
 
     Returns
     -------
@@ -207,7 +214,7 @@ def read_cuba(filename):
     wa : array of floats with shape (M,)
       Wavelengths in Angstroms.
     jnu : array of floats with shape (N, M)
-      Flux in erg/s/Hz/cm^2.
+      Flux in erg/s/Hz/cm^2/sr.
     """
     
     fh = open(filename)
@@ -256,6 +263,45 @@ def read_cuba(filename):
     jnu1 = jnu[:, iuniq]
 
     return redshifts, wa1, jnu1
+
+
+def read_cuba(filename):
+    """ Parse a Haart & Madau CUBA file.
+
+    return jnu as a function of wavelength and redshift. Removes
+    duplicate wavelength points.
+
+    Returns
+    -------
+    redshifts : array of floats with shape (N,)
+    wa : array of floats with shape (M,)
+      Wavelengths in Angstroms.
+    jnu : array of floats with shape (N, M)
+      Flux in erg/s/Hz/cm^2/sr.
+    """
+
+    # first read the redshifts
+    fh = open(filename)
+    for row in fh:
+        r = row.strip()
+        if not r or r.startswith('#'):
+            continue
+        redshifts = np.array(map(float, r.split()))
+        break
+
+    # then the wavelenths and fnu values
+    cols = readtxt(filename, skip=1)
+    assert len(cols) == len(redshifts) + 1
+    wa = cols[0]
+    jnu = np.array(cols[1:])
+
+    # remove duplicates
+    _, iuniq = np.unique(wa, return_index=True)
+    wa1 = wa[iuniq]
+    jnu1 = jnu[:, iuniq]
+
+    return redshifts, wa1, jnu1
+
 
 def interp_cuba_to_z(ztarget, redshifts, jnu):
     """ Find jnu as a function of wavelength at the target redshift.

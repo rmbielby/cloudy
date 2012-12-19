@@ -528,8 +528,7 @@ def parse_grid(cfg, outdir='output/'):
         for atom in models[0][key]:
             grid[key][atom] = []
 
-    keys = 'N Nex U Tgas Tstop filename gas_abun dust_abun'.split()
-    for k in keys:
+    for k in ('U', 'Tgas', 'Tstop', 'filename'):
         grid[k] = []
 
     # initialisation finished, now copy the values from each model.
@@ -543,7 +542,10 @@ def parse_grid(cfg, outdir='output/'):
 
         for key in ('N', 'Nex', 'gas_abun', 'dust_abun'):
             for atom in model[key]:
-                grid[key][atom].append(model[key][atom])
+                try:
+                    grid[key][atom].append(model[key][atom])
+                except:
+                    import pdb; pdb.set_trace()
 
     # finally convert lists to arrays and reshape to multiple dimensions.
 
@@ -551,7 +553,7 @@ def parse_grid(cfg, outdir='output/'):
     nnH = len(cfg.lognH)
     nZ = len(cfg.logZ)
 
-    for key in ('Tstop', 'filename'):
+    for key in ('U', 'Tstop', 'filename'):
         grid[key] = np.array(grid[key]).reshape(nNHI, nnH, nZ)
 
     for key in ('N', 'gas_abun', 'dust_abun'):
@@ -786,7 +788,9 @@ def main():
         fluxname = cfg.prefix + '_temp_uvb.dat'
         if cfg.cuba_name is None:
             cfg.cuba_name = get_data_path() + 'UVB.out'
+
         uvb = calc_uvb(cfg.z, cfg.cuba_name, match_fg=True)
+
         writetable('cloudy_jnu_HM.tbl', [uvb['energy'], uvb['logjnu']],
                    overwrite=1,
                    units=['Rydbergs', 'log10(erg/s/cm^2/Hz/ster)'],
