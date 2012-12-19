@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 from cloudy import run_and_parse
 
 run_and_parse.main()

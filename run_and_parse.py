@@ -225,12 +225,13 @@ def write_grid_input(cfg, fnu912=None, fluxfilename=None, table=None,
 
     # get grid values from parameter file
     nmodels = len(cfg.logNHI) * len(cfg.lognH) * len(cfg.logZ)
-    print 'Assuming 3 min each, the %i models will take %.2f hours to run.' % (
-        nmodels, 3./60.*nmodels/cfg.nproc)
-    s = raw_input('About %.0fMB of disk space is needed. Continue? [y] ' % (
-        50./1000.*nmodels))
-    if s.strip().lower() in ('n', 'no'):
-        sys.exit()
+    if cfg.run_cloudy:
+        print 'Assuming 3 min each, %i models will take %.2f hours.' % (
+            nmodels, 3./60.*nmodels/cfg.nproc)
+        s = raw_input('About %.0fMB of disk space is needed. Continue? [y] '
+                      % (50./1000.*nmodels))
+        if s.strip().lower() in ('n', 'no'):
+            sys.exit()
 
     contname = cfg.prefix + '_nuFnu.dat'
     for i,NHI in enumerate(cfg.logNHI):
