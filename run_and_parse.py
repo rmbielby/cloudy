@@ -1,4 +1,4 @@
-from .utils import calc_uvb, calc_local_jnu, read_starburst99
+from .utils import calc_uvb, calc_local_jnu, read_starburst99, get_data_path
 
 from barak.utilities import adict, between
 from barak.constants import Ryd, Ryd_Ang, pi, hplanck
@@ -15,6 +15,7 @@ from cStringIO import StringIO
 cfg_temp = """\
 abundances=None
 table=None
+cuba_name=None
 run_cloudy=True
 distance_starburst_kpc=None
 overwrite=False
@@ -280,18 +281,10 @@ def run_grid(indir='input/', outdir='output/', cloudy='cloudy.exe', nproc=4, ove
 
     pool = multiprocessing.Pool(processes=nproc)
     print 'Running Cloudy using %i processes' % nproc
+
     t1 = time.time()
-    p = pool.map_async(run_single_process, args)
     
-    # The following handles ctrl-c. We need to do it this way due to a
-    # bug in multiprocessing, see:
-    # http://stackoverflow.com/questions/1408356/keyboard-interrupts-with-pythons-multiprocessing-pool
-    # and http://bugs.python.org/issue8296.
-    try:
-        results = p.get(0xFFFF)
-    except KeyboardInterrupt:
-        print 'Keyboard Interrupt'
-        sys.exit()
+    p = pool.map(run_single_process, args)
 
     print '\n%.2f min elapsed' % ((time.time() - t1)/ 60.)
 
@@ -760,8 +753,10 @@ are M, N and P)."""
     return grid
 
 
-
 def read_config(name):
+    """ read the configuration file, doing some extra processing
+    beyond that done by parse_config()
+    """
     cfg = parse_config(name, defaults=cfg_defaults)
     cfg.overwrite = bool(cfg.overwrite)
     cfg.nproc = int(cfg.nproc)
@@ -769,6 +764,7 @@ def read_config(name):
     for k in 'logNHI lognH logZ'.split():
         vmin, vmax, step = map(float, cfg[k].split()) 
         cfg[k] = np.arange(vmin, vmax + 0.5*step, step)
+
     return cfg
 
 def main():
@@ -788,6 +784,8 @@ def main():
 
     if cfg.table is None:
         fluxname = cfg.prefix + '_temp_uvb.dat'
+        if cfg.cuba_name is None:
+            cfg.cuba_name = get_data_path() + 'UVB.out'
         uvb = calc_uvb(cfg.z, cfg.cuba_name, match_fg=True)
         writetable('cloudy_jnu_HM.tbl', [uvb['energy'], uvb['logjnu']],
                    overwrite=1,
@@ -795,7 +793,7 @@ def main():
                    names=['energy', 'jnu'])
 
         if cfg.distance_starburst_kpc is not None:
-            wa, F = read_starburst99('starburst.spectrum1')
+            wa, F = read_starburst99(get_data_path() + 'starburst.spectrum1')
             nu, logjnu = calc_local_jnu(wa, F, cfg.distance_starburst_kpc,
                                         cfg.fesc)
             energy = nu * hplanck / Ryd

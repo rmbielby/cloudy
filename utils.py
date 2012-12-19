@@ -3,6 +3,10 @@ from scipy.integrate import simps
 import numpy as np
 from barak.constants import Ryd_Ang, pi, hplanck
 
+def get_data_path():
+    """ Return the path to the data directory for this package.
+    """
+    return os.path.abspath(__file__).rsplit('/', 1)[0] + '/data/'
 
 def lya_gamma_faucher(z):
     """ The photoionisation rate of HI / 10^-12 
