@@ -794,8 +794,8 @@ def main():
 
         writetable('cloudy_jnu_HM.tbl', [uvb['energy'], uvb['logjnu']],
                    overwrite=1,
-                   units=['Rydbergs', 'log10(erg/s/cm^2/Hz/ster)'],
-                   names=['energy', 'jnu'])
+                   units=['Rydbergs', 'erg/s/cm^2/Hz/ster'],
+                   names=['energy', 'log10jnu'])
 
         if cfg.distance_starburst_kpc is not None:
             wa, F = read_starburst99(get_data_path() + 'starburst.spectrum1')
@@ -809,8 +809,8 @@ def main():
                                            10**logjnu1)
             writetable('cloudy_jnu_total.tbl', [uvb['energy'], uvb['logjnu']],
                        overwrite=1,
-                       units=['Rydbergs', 'log10(erg/s/cm^2/Hz/ster)'],
-                       names=['energy', 'jnu'])
+                       units=['Rydbergs', 'erg/s/cm^2/Hz/ster'],
+                       names=['energy', 'log10jnu'])
 
         write_uvb(fluxname, uvb['energy'], uvb['logjnu'], cfg.overwrite)
 

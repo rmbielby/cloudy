@@ -66,7 +66,7 @@ def find_gamma(energy, jnu):
 
     log_energy = np.log10(energy)
     isort = np.argsort(log_energy)
-    # don't understand why this works...
+    # check why this works...
     gamma = np.log(10) * simps(integrand[isort], x=log_energy[isort])
     return gamma
 
