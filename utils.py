@@ -66,7 +66,7 @@ def find_gamma(energy, jnu):
 
     log_energy = np.log10(energy)
     isort = np.argsort(log_energy)
-    # check why this works...
+    # don't understand why this works...
     gamma = np.log(10) * simps(integrand[isort], x=log_energy[isort])
     return gamma
 
@@ -100,12 +100,12 @@ def calc_uvb(redshift, cuba_name, match_fg=False):
 
     Returns a dictionary with information about the UV model:
 
-    =======  ====================================================
+    =======  ===========================================================
     energy   energy in Rydbergs 
-    Jnu      log10 of the Intensity at each energy (erg/s/cm^2/Hz/ster)
-    Jnu_912  Mean intensity at 1 Rydberg (912 Ang or 13.6 eV) in
-             erg/s/cm^2/Hz/ster.
-    =======  ====================================================
+    logjnu   log10 of the Intensity at each energy (erg/s/cm^2/Hz/ster)
+    mult     multipler that was applied to jnu to match Lya forest Gamma
+             measurements
+    =======  ===========================================================
     """
 
     if cuba_name.endswith('UVB.out'):
@@ -119,6 +119,7 @@ def calc_uvb(redshift, cuba_name, match_fg=False):
     jnu = jnu0[isort]
 
     # scale to match faucher-giguere background
+    mult = 1
     if match_fg:
         gamma_fg = lya_gamma_faucher(redshift)
         mult = gamma_fg / find_gamma(energy, jnu)
@@ -128,7 +129,7 @@ def calc_uvb(redshift, cuba_name, match_fg=False):
     logjnu = np.where(jnu > 1e-30, np.log10(jnu), -30)
 
 
-    return dict(energy=energy, logjnu=logjnu)
+    return dict(energy=energy, logjnu=logjnu, mult=mult)
 
 def calc_local_jnu(wa, logFtot, distkpc, f_esc=1, NHI_fesc=1e20):
     """
