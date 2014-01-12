@@ -17,6 +17,7 @@ abundances=None
 table=None
 cuba_name=None
 run_cloudy=True
+uvb_tilt=None
 distance_starburst_kpc=None
 overwrite=False
 logfnu912=None
@@ -797,7 +798,21 @@ def main():
                    units=['Rydbergs', 'erg/s/cm^2/Hz/ster'],
                    names=['energy', 'log10jnu'])
 
-        if cfg.distance_starburst_kpc is not None:
+        if cfg.uvb_tilt is not None:
+            if cfg.distance_starburst_kpc is not None:
+                raise RuntimeError('Must only specify one of uvb_tilt and\
+                distance_starburst_kpc!')
+            # tilt the UV background between 1 and 10 Rydbergs
+            logjnu = tilt_spec(cfg.uvb_tilt, uvb['energy'], uvb['logjnu'],
+                               emin=1, emax=10)
+            print('TIlting UVB using parameter {}'.format(cfg.uvb_tilt))
+            writetable('cloudy_jnu_tilted.tbl', [uvb['energy'], logjnu],
+                       overwrite=1,
+                       units=['Rydbergs', 'erg/s/cm^2/Hz/ster'],
+                       names=['energy', 'log10jnu'])
+            uvb['logjnu'] = logjnu
+
+        elif cfg.distance_starburst_kpc is not None:
             wa, F = read_starburst99(get_data_path() + 'starburst.spectrum1')
             nu, logjnu = calc_local_jnu(wa, F, cfg.distance_starburst_kpc,
                                         cfg.fesc)
