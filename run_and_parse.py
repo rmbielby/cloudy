@@ -1,5 +1,5 @@
 from .utils import calc_uvb, calc_local_jnu, read_starburst99, get_data_path,\
-     tilt_spec
+     tilt_spec, find_gamma
 
 from barak.utilities import adict, between
 from barak.constants import Ryd, Ryd_Ang, pi, hplanck
