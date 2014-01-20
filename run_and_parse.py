@@ -1,4 +1,5 @@
-from .utils import calc_uvb, calc_local_jnu, read_starburst99, get_data_path
+from .utils import calc_uvb, calc_local_jnu, read_starburst99, get_data_path,\
+     tilt_spec
 
 from barak.utilities import adict, between
 from barak.constants import Ryd, Ryd_Ang, pi, hplanck
@@ -38,11 +39,12 @@ prefix = qg
 # Redshift for the UV background
 z = 2.2
 # Minimum, maximum and step for neutral hydrogen column density (cm^-2)
-logNHI =  14.0  19.0 1.0
+logNHI =   14.0  19.0 1.0
 # Minimum, maximum and step for metallicity
-logZ   =  -2.0  0.0  1.0
+logZ   =   -2.0  0.0  1.0
 # Minimum, maximum and step for hydrogen density (cm^-3)
-lognH  =  -5.0  0.0  0.5
+lognH  =   -5.0  0.0  0.5
+tilt_uvb = 0.0
 # number of processors to use
 nproc = 4
 # overwrite any existing files?
@@ -90,7 +92,8 @@ def write_uvb(outname, energy, logjnu, overwrite):
         print outname, 'exists, skipping'
 
 
-def write_input(outfilename, z, logNHI, metallicity, lognH, fluxfilename=None,
+def write_input(outfilename, z, logNHI, metallicity, lognH,
+                fluxfilename=None,
                 table=None, logU=None, fnu912=None, title='model',
                 abundances=None, iterate='to convergence', grains=False,
                 CIE_temperature=None, contname=None, trimming='-10',
@@ -703,7 +706,6 @@ def parse_grid2(cfg, outdir='output'):
                 grid['Tstop'][i,j,k] = m['Tstop']
                 grid['Tgas'][i,j,k,:] = m['Tgas']
 
-
     # U values only vary with nH, so we don't need to keep a big grid
     # of them.
     U = grid['U'][0,:,0].squeeze()
@@ -805,7 +807,7 @@ def main():
             # tilt the UV background between 1 and 10 Rydbergs
             logjnu = tilt_spec(cfg.uvb_tilt, uvb['energy'], uvb['logjnu'],
                                emin=1, emax=10)
-            print('TIlting UVB using parameter {}'.format(cfg.uvb_tilt))
+            print('Tilting UVB using parameter {}'.format(cfg.uvb_tilt))
             writetable('cloudy_jnu_tilted.tbl', [uvb['energy'], logjnu],
                        overwrite=1,
                        units=['Rydbergs', 'erg/s/cm^2/Hz/ster'],
