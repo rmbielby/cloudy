@@ -1,3 +1,4 @@
+from barak.utilities import between
 from barak.io import parse_config, readtxt
 from scipy.integrate import simps
 import numpy as np
