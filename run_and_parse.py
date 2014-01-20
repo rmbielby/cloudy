@@ -68,7 +68,6 @@ overwrite = False
 # run_cloudy = False
 """)
     fh.close()
-    
 
 
 def write_uvb(outname, energy, logjnu, overwrite):
@@ -793,7 +792,7 @@ def main():
         if cfg.cuba_name is None:
             cfg.cuba_name = get_data_path() + 'UVB.out'
 
-        uvb = calc_uvb(cfg.z, cfg.cuba_name, match_fg=True)
+        uvb = calc_uvb(cfg.z, cfg.cuba_name, match_fg=False)
 
         writetable('cloudy_jnu_HM.tbl', [uvb['energy'], uvb['logjnu']],
                    overwrite=1,
@@ -808,6 +807,15 @@ def main():
             logjnu = tilt_spec(cfg.uvb_tilt, uvb['energy'], uvb['logjnu'],
                                emin=1, emax=10)
             print('Tilting UVB using parameter {}'.format(cfg.uvb_tilt))
+
+            # now re-normalise to match the photionization rate of the
+            # default spectrum.
+
+            gamma_default = find_gamma(uvb['energy'], 10**uvb['logjnu'])
+            mult = gamma_default / find_gamma(uvb['energy'], 10**logjnu)
+            print 'Scaling tilted Jnu by %.3g to match default gamma' % mult
+            logjnu = logjnu + np.log10(mult)
+
             writetable('cloudy_jnu_tilted.tbl', [uvb['energy'], logjnu],
                        overwrite=1,
                        units=['Rydbergs', 'erg/s/cm^2/Hz/ster'],

@@ -54,7 +54,7 @@ def hcross_section(energy):
 
 def find_gamma(energy, jnu):
     """ Find the photoionization rate / 1e12 given the spectrum as a
-    function of energy.
+    function of energy in Rydbergs.
 
     in units of photons / s.
 
@@ -158,7 +158,6 @@ def calc_uvb(redshift, cuba_name, match_fg=False):
         jnu *= mult
 
     logjnu = np.where(jnu > 1e-30, np.log10(jnu), -30)
-
 
     return dict(energy=energy, logjnu=logjnu, mult=mult)
 
