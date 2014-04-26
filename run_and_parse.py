@@ -44,7 +44,7 @@ logNHI =   14.0  19.0 1.0
 logZ   =   -2.0  0.0  1.0
 # Minimum, maximum and step for hydrogen density (cm^-3)
 lognH  =   -5.0  0.0  0.5
-tilt_uvb = 0.0
+uvb_tilt = 0.0
 # number of processors to use
 nproc = 4
 # overwrite any existing files?
@@ -588,18 +588,25 @@ def parse_grid(cfg, outdir='output/'):
                 val = float(val)
             grid[key][atom] = val
 
+    if cfg.uvb_tilt isnot None:
+        grid['uvb_tilt'] = cfg.uvb_tilt 
+
     grid['help'] = """\
 cont:      Total incident continuum Fnu (ergs/cm^2/s/Hz), output by
            Cloudy's save incident continuum command, as a function
            of energy in Rydbergs.
 filename:  Output filename. shape (M, N, P)
 redshift:  CMB Redshift.
+uvb_tilt:  Value of the alpha_UV tilt parameter.
 nH:        log10 total hydrogen density (cm^-3), shape (N,)
+
 N:         log10 column density (cm^-2) per atom and ion. Ordered
-           lowest to highest ionisation level. Each ion is shape(M, N, P)
+           lowest to highest ionisation level. Each ion is shape (M, N,
+           P, Q), where Q is the number of ion species.
+
 Nex:       log10 column density (cm^-2) for excited states.
 U:         log10 ionisation parameter (dimensionless), shape (N,)
-Tgas:      log10 gas temperature (K) for HI and HII.  shape(M, N, P)
+Tgas:      log10 gas temperature (K) for HI and HII.  shape (M, N, P, 2)
 NHI:       Cloudy stopped once this log10 NHI (cm^-2) was reached, shape (M,)
 Tstop:     Cloudy stopped once this log10 temperature (K) was reached.
            shape(M, N, P)
@@ -608,159 +615,14 @@ gas_abun:  Gas-phase abundance, each element has shape (P,)
 dust_abun: Abundances on dust, each element has shape (P,)
 
 For Tgas, Tstop, filename and N values, the index order is ind_NHI,
-ind_nH, ind_Z. (The corresponding length of each axes as shown above
-are M, N and P)."""
-
-    return grid
-
-
-
-def parse_grid2(cfg, outdir='output'):
-
-    outdir = 'output'
-    Ni = len(cfg['logNHI'])
-    Nj = len(cfg['lognH'])
-    Nk = len(cfg['logZ'])
-
-    # not first index is i (NHI), second j (nH), last k (Z).
-    models = [[[None for k in xrange(Nk)] for j in xrange(Nj)]
-              for i in xrange(Ni)]
-
-    bad = []
-    atoms = ('Al Ar B Be C Ca Cl Co Cr Cu F Fe Fl '
-             'H He K Li Mg Mn N Na Ne Ni O P S Sc Si Ti V Zn').split()
-    atomlen = dict((atom,0) for atom in atoms)
-    filenames = [[[None for k in xrange(Nk)] for j in xrange(Nj)]
-                 for i in xrange(Ni)]
-    for i in xrange(Ni):
-        for j in xrange(Nj):
-            for k in xrange(Nk):
-                name = os.path.join(outdir, '%02i_%02i_%02i.out' % (i, j, k))
-                if not os.path.lexists(name):
-                    name = name + '.gz'
-                #print name
-                out = parse_output(name)
-                if 'N' not in out:
-                    #print 'Trouble reading', name
-                    bad.append(name)
-                else:
-                    # check there aren't any atoms we don't have
-                    assert len(set(out['N']).difference(atoms)) == 0
-                    # find the number of column densities for each
-                    # atom.
-                    for a in out['N']:
-                        atomlen[a] = max(atomlen[a], len(out['N'][a]))
-
-                models[i][j][k] = out
-                filenames[i][j][k] = os.path.split(name)[1]
-                
-
-    print len(bad), 'Unreadable output files:',  bad
-
-    # make dictionary to hold results
-    grid = {}
-    for key in ('U', 'Tstop'):
-        grid[key] = np.empty((Ni, Nj, Nk)) * np.nan
-
-    grid['Tgas'] = np.empty((Ni, Nj, Nk, 2)) * np.nan
-    grid['NHI'] = cfg.logNHI
-    grid['nH'] = cfg.lognH
-    grid['Z'] = cfg.logZ
-    grid['redshift'] = cfg.z
-
-    # Read the incident continuum
-    energy, nuFnu = np.loadtxt(cfg.prefix + '_nuFnu.dat', unpack=1)
-    nu = energy * Ryd / hplanck
-    fnu = nuFnu / nu
-    isort = energy.argsort()
-    cont = np.rec.fromarrays([energy[isort], fnu[isort]], names='ryd,fnu')   
-
-    grid['cont'] = cont
-
-    grid['N'] = OrderedDict()
-    for atom in atoms:
-        if atomlen[atom] == 0:
-            continue
-        grid['N'][atom] = np.empty((Ni, Nj, Nk, atomlen[atom])) * np.nan
-
-    for key in ('gas_abun', 'dust_abun'):
-        grid[key] = OrderedDict()
-        for atom in atoms:
-            grid[key][atom] = np.empty((Ni, Nj, Nk)) * np.nan
-
-    for i in xrange(Ni):
-        for j in xrange(Nj):
-            for k in xrange(Nk):
-                m = models[i][j][k]
-                if 'N' not in m:
-                    continue
-                for atom in m['N']:
-                    grid['N'][atom][i,j,k,:] = m['N'][atom]
-                for atom in m['gas_abun']:
-                    grid['gas_abun'][atom][i,j,k] = m['gas_abun'][atom]
-                for atom in m['dust_abun']:
-                    grid['dust_abun'][atom][i,j,k] = m['dust_abun'][atom]
-                    
-                grid['U'][i,j,k] = m['U']
-                grid['Tstop'][i,j,k] = m['Tstop']
-                grid['Tgas'][i,j,k,:] = m['Tgas']
-
-    # U values only vary with nH, so we don't need to keep a big grid
-    # of them.
-    U = grid['U'][0,:,0].squeeze()
-    if U.ndim == 0:
-        U = float(U)
-    del grid['U']
-    grid['U'] = U
-
-    grid['filename'] = np.array(filenames)
-
-    # abundance values only vary with Z, so we don't need to keep a big grid
-    # of them either
-
-    for key in ('gas_abun', 'dust_abun'):
-       for atom in grid[key]:
-           i = 0
-           while True:
-               val = grid[key][atom][i,0,:].squeeze()
-               if not np.isnan(val).any():
-                   break
-               i += 1
-               if i == Ni:
-                   break
-
-           if val.ndim == 0:
-               val = float(val)
-           grid[key][atom] = val
-
-    grid['help'] = """\
-cont:      Total incident continuum Fnu (ergs/cm^2/s/Hz), output by
-           Cloudy's save incident continuum command, as a function
-           of energy in Rydbergs.
-filename:  Output filename. shape (M, N, P)
-redshift:  CMB Redshift.
-nH:        log10 total hydrogen density (cm^-3), shape (N,)
-N:         log10 column density (cm^-2) per atom and ion. Ordered
-           lowest to highest ionisation level. Each ion is shape(M, N, P)
-U:         log10 ionisation parameter (dimensionless), shape (N,)
-Tgas:      log10 gas temperature (K) for HI and HII.  shape(M, N, P)
-NHI:       Cloudy stopped once this log10 NHI (cm^-2) was reached, shape (M,)
-Tstop:     Cloudy stopped once this log10 temperature (K) was reached.
-           shape(M, N, P)
-Z:         Metallicity, shape (P,)
-gas_abun:  Gas-phase abundance, each element has shape (P,)
-dust_abun: Abundances on dust, each element has shape (P,)
-
-For Tgas, Tstop, filename and N values, the index order is ind_NHI,
-ind_nH, ind_Z. (The corresponding length of each axes as shown above
-are M, N and P)."""
+ind_nH, ind_Z."""
 
     return grid
 
 
 def read_config(name):
     """ read the configuration file, doing some extra processing
-    beyond that done by parse_config()
+    beyond that done by parse_config().
     """
     cfg = parse_config(name, defaults=cfg_defaults)
     cfg.overwrite = bool(cfg.overwrite)
@@ -803,12 +665,18 @@ def main():
             if cfg.distance_starburst_kpc is not None:
                 raise RuntimeError('Must only specify one of uvb_tilt and\
                 distance_starburst_kpc!')
+
+            # remember which bits had 1e-30
+            clow = uvb['logjnu'] == -30
             # tilt the UV background between 1 and 10 Rydbergs
             logjnu = tilt_spec(cfg.uvb_tilt, uvb['energy'], uvb['logjnu'],
                                emin=1, emax=10)
+
+            logjnu[clow] = -30
+
             print('Tilting UVB using parameter {}'.format(cfg.uvb_tilt))
 
-            # now re-normalise to match the photionization rate of the
+            # now re-normalise to match the photoionization rate of the
             # default spectrum.
 
             gamma_default = find_gamma(uvb['energy'], 10**uvb['logjnu'])

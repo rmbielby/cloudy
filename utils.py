@@ -110,6 +110,10 @@ def read_observed(filename):
     """
     obs = parse_config(filename)
     for k in obs:
+        # skip entries that are used for the priors when fitting
+        # with emcee
+        if k.startswith('min ') or k.startswith('max '):
+            continue
         vals = map(float, obs[k].split())
         if len(vals) == 2:
             obs[k] = vals[0], vals[1], vals[1]
