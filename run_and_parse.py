@@ -619,6 +619,38 @@ ind_nH, ind_Z."""
 
     return grid
 
+def savehdf5(filename, M, overwrite=cfg.overwrite):
+    import h5py
+
+    if os.path.exists(filename):
+        print 'File exists, skipping.'
+        return
+    else:
+        print 'Writing to {}'.format(filename)
+
+    fh = h5py.File(filename, 'w')
+
+    fh.attrs['help'] = M['help']
+    fh.attrs['redshift'] = M['redshift']
+
+    if 'uvb_tilt' in M:
+        fh.attrs['uvb_tilt'] = M['uvb_tilt']
+
+    for k in 'nH Z NHI U Tstop filename cont Tgas'.split():
+        a = M[k]
+        d = fh.create_dataset(k, a.shape, dtype=a.dtype, compression='gzip')
+        d[:] = a
+
+    for k in 'N Nex gas_abun dust_abun'.split():
+        g = fh.create_group(k)
+        for atom in M[k]:
+            a = M[k][atom]
+            d = g.create_dataset(atom, a.shape, dtype=a.dtype,
+                                 compression='gzip')
+            d[:] = a
+
+    fh.close()
+
 
 def read_config(name):
     """ read the configuration file, doing some extra processing
@@ -725,6 +757,10 @@ def main():
     filename = cfg.prefix + '_grid.sav.gz'
     print 'Writing to', filename
     saveobj(filename, models, overwrite=cfg.overwrite)
+    savehdf5(filename.replace('.sav.gz', '.hdf5'), models,
+             overwrite=cfg.overwrite)
 
+
+    
 if __name__ == '__main__':
     main()
