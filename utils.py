@@ -39,7 +39,7 @@ def hcross_section(energy):
     energy = np.atleast_1d(energy)
     a_nu = np.zeros(len(energy), float)
 
-    A0 = 6.30e-18
+    A0 = 6.304e-18
 
     c0 = energy > 1
     if c0.any():
@@ -62,7 +62,7 @@ def find_gamma(energy, jnu):
     """
 
     sigma_nu = hcross_section(energy)
-    # output is in units of 1e12
+    # output is in units of 1e-12
     integrand = 4. * pi * jnu * sigma_nu / hplanck * 1e12
 
     log_energy = np.log10(energy)
@@ -110,7 +110,7 @@ def read_observed(filename):
     """
     obs = parse_config(filename)
     for k in obs:
-        # skip entries that are used for the priors when fitting
+        # don't alter entries that are used for the priors when fitting
         # with emcee
         if k.startswith('min ') or k.startswith('max '):
             continue
