@@ -236,9 +236,10 @@ def write_grid_input(cfg, fnu912=None, fluxfilename=None, table=None,
         if s.strip().lower() in ('n', 'no'):
             sys.exit()
 
-    contname = cfg.prefix + '_nuFnu.dat'
     for i,NHI in enumerate(cfg.logNHI):
         for ii,z in enumerate(cfg.z):
+            print ii,z
+            contname = cfg.prefix + 'z{0:05.3f}_nuFnu.dat'.format(z)
             fnu912,fluxfilename = get_uvb(cfg,z)
             for j,nH in enumerate(cfg.lognH):
                 for k,Z in enumerate(cfg.logZ):
@@ -702,13 +703,13 @@ def main():
 
 def get_uvb(cfg,redshift):
     if cfg.table is None:
-        fluxname = cfg.prefix + '_z{0:5.3f}_uvb.dat'.format(redshift)
+        fluxname = cfg.prefix + '_z{0:05.3f}_uvb.dat'.format(redshift)
         if cfg.cuba_name is None:
             cfg.cuba_name = get_data_path() + 'UVB.out'
 
         uvb = calc_uvb(redshift, cfg.cuba_name, match_fg=False)
 
-        writetable('cloudy_jnu_z{0:05.3}_HM.tbl'.format(redshift), [uvb['energy'], uvb['logjnu']],
+        writetable('cloudy_jnu_z{0:05.3f}_HM.tbl'.format(redshift), [uvb['energy'], uvb['logjnu']],
                    overwrite=1,
                    units=['Rydbergs', 'erg/s/cm^2/Hz/ster'],
                    names=['energy', 'log10jnu'])
