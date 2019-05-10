@@ -32,7 +32,7 @@ cfg_defaults = parse_config(StringIO(cfg_temp))
 def write_example_grid_config():
     fh = open('grid.cfg', 'w')
     fh.write("""\
-# Path to the CUBA file giving the UV background. 
+# Path to the CUBA file giving the UV background.
 cuba_name = /home/nhmc/code/repo/QSOClustering-svn/misc/CUBA/Q1G01/bkgthick.out
 # Prefix for final grid file
 prefix = qg
@@ -76,7 +76,7 @@ def write_uvb(outname, energy, logjnu, overwrite):
 
     Parameters
     ----------
-    energy   energy in Rydbergs 
+    energy   energy in Rydbergs
     Jnu      Intensity at each energy (erg/s/cm^2/Hz/ster)
     """
     if not os.path.lexists(outname) or overwrite:
@@ -84,7 +84,7 @@ def write_uvb(outname, energy, logjnu, overwrite):
         fh = open(outname, 'w')
         fh.write('interpolate (%.9f -30.0)\n' % 1e-8)
         for i in xrange(len(energy)):
-            fh.write('continue (%s %10.6f)\n' % (energy[i], logjnu[i]))         
+            fh.write('continue (%s %10.6f)\n' % (energy[i], logjnu[i]))
         fh.write('continue (%f -30.0)\n' % 7.4e6)
         fh.close()
     else:
@@ -146,13 +146,13 @@ def write_input(outfilename, z, logNHI, metallicity, lognH,
       abundance command.
 
     """
-    
+
     # output string
     s = ['title %s' % title]
     s += ['radius 30']              # log inner radius (cm)
     s += ['print last']             # Don't print results from iterations
     s += ['CMB redshift %s' % z]
-    
+
     if CIE_temperature is None:
         s += ['stop temperature = 10K linear']
     s += ['hden %s' % lognH]
@@ -166,7 +166,7 @@ def write_input(outfilename, z, logNHI, metallicity, lognH,
     s += ['set trimming %s' % trimming]
     if CIE_temperature is not None:
         s += ['constant temperature, t=%sK' % CIE_temperature]
-    
+
     if logU is not None:
         s += ['ionization parameter = ' % logU]
     elif fnu912 is not None:
@@ -194,7 +194,7 @@ def write_input(outfilename, z, logNHI, metallicity, lognH,
     fh = open(outfilename, 'w')
     fh.write('\n'.join(s))
     fh.close()
-    
+
     return
 
 def write_grid_input(cfg, fnu912=None, fluxfilename=None, table=None,
@@ -238,18 +238,20 @@ def write_grid_input(cfg, fnu912=None, fluxfilename=None, table=None,
 
     contname = cfg.prefix + '_nuFnu.dat'
     for i,NHI in enumerate(cfg.logNHI):
-        for j,nH in enumerate(cfg.lognH):
-            for k,Z in enumerate(cfg.logZ):
-                inname = '%02i_%02i_%02i.in' % (i, j, k)
-                outname = inname[:-3] + '.out'
-                write_input(indir + inname, cfg.z, NHI, Z, nH,
-                            fluxfilename=fluxfilename,
-                            table=table, abundances=abundances,
-                            fnu912=fnu912, contname=contname,
-                            trimming=cfg.trimming, iterate='2 times',
-                            grains=cfg.grains)
-                # only save incident continuum for the first model
-                contname = None
+        for ii,z in enumerate(cfg.z):
+            fnu912,fluxfilename = get_uvb(cfg,z)
+            for j,nH in enumerate(cfg.lognH):
+                for k,Z in enumerate(cfg.logZ):
+                    inname = '%02i_%02i_%02i_%02i.in' % (i, ii, j, k)
+                    outname = inname[:-3] + '.out'
+                    write_input(indir + inname, z, NHI, Z, nH,
+                                fluxfilename=fluxfilename,
+                                table=table, abundances=abundances,
+                                fnu912=fnu912, contname=contname,
+                                trimming=cfg.trimming, iterate='2 times',
+                                grains=cfg.grains)
+                    # only save incident continuum for the first model
+                    contname = None
 
 def run_single_process(command):
     """ Call a cloudy command and print a message. Used by
@@ -279,7 +281,7 @@ def run_grid(indir='input/', outdir='output/', cloudy='cloudy.exe', nproc=4, ove
 
     # make list of input arguments to run_single_process()
     args = []
-    for inname in sorted(glob(indir + '??_??_??.in')):
+    for inname in sorted(glob(indir + '??_??_??_??.in')):
         outname = outdir + inname.split('/')[-1][:-3] + '.out'
         args.append(('%s < %s > %s' % (cloudy, inname, outname)))
 
@@ -287,7 +289,7 @@ def run_grid(indir='input/', outdir='output/', cloudy='cloudy.exe', nproc=4, ove
     print 'Running Cloudy using %i processes' % nproc
 
     t1 = time.time()
-    
+
     p = pool.map(run_single_process, args)
 
     print '\n%.2f min elapsed' % ((time.time() - t1)/ 60.)
@@ -331,7 +333,7 @@ def parse_output(filename):
     """ parse a cloudy output file. Return a dictionary with the
     following info:
 
-    filename:  Output filename 
+    filename:  Output filename
     info:      Model grid info.
     redshift:  CMB Redshift.
     nH:        log10 total hydrogen density (cm^-3).
@@ -348,34 +350,34 @@ def parse_output(filename):
     dust_abun: Dust abundances.
     """
     atom_names = OrderedDict(Sodium     ='Na',
-                             Chromium   ='Cr', 
-                             Lithium    ='Li', 
-                             Beryllium  ='Be', 
-                             Nickel     ='Ni', 
-                             Potassium  ='K', 
-                             Argon      ='Ar', 
-                             Boron      ='B', 
-                             Scandium   ='Sc', 
-                             Carbon     ='C', 
-                             Sulphur    ='S', 
-                             Chlorine   ='Cl', 
-                             Phosphorus ='P', 
-                             Zinc       ='Zn', 
-                             Oxygen     ='O', 
-                             Vanadium   ='V', 
-                             Manganese  ='Mn', 
-                             Silicon    ='Si', 
-                             Calcium    ='Ca', 
-                             Magnesium  ='Mg', 
-                             Iron       ='Fe', 
-                             Copper     ='Cu', 
-                             Aluminium  ='Al', 
-                             Helium     ='He', 
-                             Neon       ='Ne', 
-                             Cobalt     ='Co', 
-                             Titanium   ='Ti', 
-                             Nitrogen   ='N', 
-                             Hydrogen   ='H', 
+                             Chromium   ='Cr',
+                             Lithium    ='Li',
+                             Beryllium  ='Be',
+                             Nickel     ='Ni',
+                             Potassium  ='K',
+                             Argon      ='Ar',
+                             Boron      ='B',
+                             Scandium   ='Sc',
+                             Carbon     ='C',
+                             Sulphur    ='S',
+                             Chlorine   ='Cl',
+                             Phosphorus ='P',
+                             Zinc       ='Zn',
+                             Oxygen     ='O',
+                             Vanadium   ='V',
+                             Manganese  ='Mn',
+                             Silicon    ='Si',
+                             Calcium    ='Ca',
+                             Magnesium  ='Mg',
+                             Iron       ='Fe',
+                             Copper     ='Cu',
+                             Aluminium  ='Al',
+                             Helium     ='He',
+                             Neon       ='Ne',
+                             Cobalt     ='Co',
+                             Titanium   ='Ti',
+                             Nitrogen   ='N',
+                             Hydrogen   ='H',
                              Fluorine   ='Fl')
 
     out = {}
@@ -385,7 +387,7 @@ def parse_output(filename):
         fh = gzip.open(filename, 'rb')
     else:
         fh = open(filename)
-    
+
     rows = fh.readlines()
     fh.close()
 
@@ -422,7 +424,7 @@ def parse_output(filename):
                 out['Tstop'] = float(r[4].strip('K'))
         i += 1
 
-    
+
     i += 1
     out['gas_abun'], i = parse_abundances(i, rows)
     i += 1
@@ -443,10 +445,10 @@ def parse_output(filename):
         i += 1
         if i == len(rows):
             return out
-    
+
     out['U'] = float(r[2])
 
-    while not (rows[i].startswith(' Hydrogen') and 
+    while not (rows[i].startswith(' Hydrogen') and
                rows[i][53:81] == 'Log10 Column density (cm^-2)'):
         i += 1
         if i == len(rows):
@@ -476,46 +478,46 @@ def parse_output(filename):
     # read column densities for excited states
     assert rows[i].startswith(' Exc state')
     row = rows[i][len(' Exc state'):].strip()
-    #print row, rows[i+1]
-    vals = [row[j:j+14] for j in range(0, len(row), 14)]
+    vals = row.split()
     row = rows[i+1].strip()
-    vals += [row[j:j+14] for j in range(0, len(row), 14)]
-    #print vals
-
-    out['Nex'] = dict((v[:4], float(v[4:])) for v in vals)
+    vals = np.append(vals,row.split())
+    valkeys = vals[np.arange(len(vals)/2)*2]
+    vals    = vals[np.arange(len(vals)/2)*2+1]
+    out['Nex'] = dict((valkeys[vi], float(vals[vi])) for vi in np.arange(len(vals)))
     #print repr(out['Nex'])
     while 'Log10 Mean Temperature (over radius)' not in rows[i]:
         i += 1
     # temperature of neutral and ionised H
     out['Tgas'] = float(rows[i][11:18]), float(rows[i][18:26])
-    
+
     return out
-    
+
 def parse_grid(cfg, outdir='output/'):
 
     # read each model output
-    names = sorted(glob(outdir + '??_??_??.out*'))
-    assert names, outdir + '??_??_??.out*'
+    names = sorted(glob(outdir + '??_??_??_??.out*'))
+    print names
+    assert names, outdir + '??_??_??_??.out*'
     print 'Reading output'
     models = []
     for n in names:
         models.append(parse_output(n))
 
     # Read the incident continuum
-    energy, nuFnu = np.loadtxt(cfg.prefix + '_nuFnu.dat', unpack=1)
+    energy, nuFnu, OccNum = np.loadtxt(cfg.prefix + '_nuFnu.dat', unpack=1)
     nu = energy * Ryd / hplanck
     fnu = nuFnu / nu
     isort = energy.argsort()
-    cont = np.rec.fromarrays([energy[isort], fnu[isort]], names='ryd,fnu')   
-        
+    cont = np.rec.fromarrays([energy[isort], fnu[isort]], names='ryd,fnu')
+
     # combine into large arrays
 
     grid = {}
     grid['cont'] = cont
     grid['NHI'] = cfg.logNHI
-    grid['nH'] = cfg.lognH
-    grid['Z'] = cfg.logZ
     grid['redshift'] = cfg.z
+    grid['Z'] = cfg.logZ
+    grid['nH'] = cfg.lognH
 
     # initialise keys that will contain one or more values for each
     # model.
@@ -554,22 +556,23 @@ def parse_grid(cfg, outdir='output/'):
     # finally convert lists to arrays and reshape to multiple dimensions.
 
     nNHI = len(cfg.logNHI)
-    nnH = len(cfg.lognH)
-    nZ = len(cfg.logZ)
+    nz   = len(cfg.z)
+    nZ   = len(cfg.logZ)
+    nnH  = len(cfg.lognH)
 
     for key in ('U', 'Tstop', 'filename'):
-        grid[key] = np.array(grid[key]).reshape(nNHI, nnH, nZ)
+        grid[key] = np.array(grid[key]).reshape(nNHI, nz, nZ, nnH)
 
     for key in ('N', 'gas_abun', 'dust_abun'):
         for atom in grid[key]:
             grid[key][atom] = np.array(grid[key][atom]).reshape(
-                nNHI, nnH, nZ, -1)
+                nNHI, nz, nZ, nnH, -1)
 
     key = 'Tgas'
-    grid[key] = np.array(grid[key]).reshape(nNHI, nnH, nZ, -1)
+    grid[key] = np.array(grid[key]).reshape(nNHI, nz, nZ, nnH, -1)
     key = 'Nex'
     for trans in grid[key]:
-        grid[key][trans] = np.array(grid[key][trans]).reshape(nNHI, nnH, nZ)
+        grid[key][trans] = np.array(grid[key][trans]).reshape(nNHI, nz, nZ, nnH)
 
     # U values only vary with nH, so we don't need to keep a big grid
     # of them.
@@ -577,7 +580,7 @@ def parse_grid(cfg, outdir='output/'):
     if U.ndim == 0:
         U = float(U)
     del grid['U']
-    grid['U'] = U 
+    grid['U'] = U
 
     # abundance values only vary with Z, so we don't need to keep a big grid
     # of them either
@@ -588,8 +591,8 @@ def parse_grid(cfg, outdir='output/'):
                 val = float(val)
             grid[key][atom] = val
 
-    if cfg.uvb_tilt isnot None:
-        grid['uvb_tilt'] = cfg.uvb_tilt 
+    if cfg.uvb_tilt is not None:
+        grid['uvb_tilt'] = cfg.uvb_tilt
 
     grid['help'] = """\
 cont:      Total incident continuum Fnu (ergs/cm^2/s/Hz), output by
@@ -619,7 +622,7 @@ ind_nH, ind_Z."""
 
     return grid
 
-def savehdf5(filename, M, overwrite=cfg.overwrite):
+def savehdf5(filename, M, overwrite=None):
     import h5py
 
     if os.path.exists(filename):
@@ -631,12 +634,12 @@ def savehdf5(filename, M, overwrite=cfg.overwrite):
     fh = h5py.File(filename, 'w')
 
     fh.attrs['help'] = M['help']
-    fh.attrs['redshift'] = M['redshift']
+    # fh.attrs['redshift'] = M['redshift']
 
     if 'uvb_tilt' in M:
         fh.attrs['uvb_tilt'] = M['uvb_tilt']
 
-    for k in 'nH Z NHI U Tstop filename cont Tgas'.split():
+    for k in 'NHI redshift Z nH U Tstop filename cont Tgas'.split():
         a = M[k]
         d = fh.create_dataset(k, a.shape, dtype=a.dtype, compression='gzip')
         d[:] = a
@@ -659,9 +662,9 @@ def read_config(name):
     cfg = parse_config(name, defaults=cfg_defaults)
     cfg.overwrite = bool(cfg.overwrite)
     cfg.nproc = int(cfg.nproc)
-    cfg.z = float(cfg.z)
-    for k in 'logNHI lognH logZ'.split():
-        vmin, vmax, step = map(float, cfg[k].split()) 
+    # cfg.z = float(cfg.z)
+    for k in 'logNHI z logZ lognH'.split():
+        vmin, vmax, step = map(float, cfg[k].split())
         cfg[k] = np.arange(vmin, vmax + 0.5*step, step)
 
     return cfg
@@ -681,14 +684,31 @@ def main():
         print '  %s: %s' % (k, cfg[k])
     print ''
 
+
+    write_grid_input(cfg, table=cfg.table,
+                     abundances=cfg.abundances)
+
+    if cfg.run_cloudy:
+        run_grid(nproc=cfg.nproc, overwrite=cfg.overwrite, cloudy=cfg.cloudy_path)
+
+    models = parse_grid(cfg)
+
+    filename = cfg.prefix + '_grid.sav.gz'
+    print 'Writing to', filename
+    saveobj(filename, models, overwrite=cfg.overwrite)
+    savehdf5(filename.replace('.sav.gz', '.hdf5'), models,
+             overwrite=cfg.overwrite)
+
+
+def get_uvb(cfg,redshift):
     if cfg.table is None:
-        fluxname = cfg.prefix + '_temp_uvb.dat'
+        fluxname = cfg.prefix + '_z{0:5.3f}_uvb.dat'.format(redshift)
         if cfg.cuba_name is None:
             cfg.cuba_name = get_data_path() + 'UVB.out'
 
-        uvb = calc_uvb(cfg.z, cfg.cuba_name, match_fg=False)
+        uvb = calc_uvb(redshift, cfg.cuba_name, match_fg=False)
 
-        writetable('cloudy_jnu_HM.tbl', [uvb['energy'], uvb['logjnu']],
+        writetable('cloudy_jnu_z{0:05.3}_HM.tbl'.format(redshift), [uvb['energy'], uvb['logjnu']],
                    overwrite=1,
                    units=['Rydbergs', 'erg/s/cm^2/Hz/ster'],
                    names=['energy', 'log10jnu'])
@@ -745,22 +765,7 @@ def main():
     else:
         logfnu912 = cfg.logfnu912
         fluxname = None
+    return logfnu912,fluxname
 
-    write_grid_input(cfg, fnu912=logfnu912, fluxfilename=fluxname, table=cfg.table,
-                     abundances=cfg.abundances)
-
-    if cfg.run_cloudy:
-        run_grid(nproc=cfg.nproc, overwrite=cfg.overwrite)
-
-    models = parse_grid(cfg)
-
-    filename = cfg.prefix + '_grid.sav.gz'
-    print 'Writing to', filename
-    saveobj(filename, models, overwrite=cfg.overwrite)
-    savehdf5(filename.replace('.sav.gz', '.hdf5'), models,
-             overwrite=cfg.overwrite)
-
-
-    
 if __name__ == '__main__':
     main()
