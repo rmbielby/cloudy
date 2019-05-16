@@ -506,9 +506,7 @@ def parse_grid(cfg, outdir='output/'):
         models.append(parse_output(n))
 
     # combine into large arrays
-
     grid = {}
-    grid['cont'] = cont
     grid['NHI'] = cfg.logNHI
     grid['redshift'] = cfg.z
     grid['Z'] = cfg.logZ
@@ -521,6 +519,7 @@ def parse_grid(cfg, outdir='output/'):
     fnu = nuFnu / nu
     isort = energy.argsort()
     cont = np.rec.fromarrays([energy[isort], fnu[isort]], names='ryd,fnu')
+    grid['cont'] = cont
 
     # initialise keys that will contain one or more values for each
     # model.
