@@ -505,13 +505,6 @@ def parse_grid(cfg, outdir='output/'):
     for n in names:
         models.append(parse_output(n))
 
-    # Read the incident continuum
-    energy, nuFnu, OccNum = np.loadtxt(cfg.prefix + '_nuFnu.dat', unpack=1)
-    nu = energy * Ryd / hplanck
-    fnu = nuFnu / nu
-    isort = energy.argsort()
-    cont = np.rec.fromarrays([energy[isort], fnu[isort]], names='ryd,fnu')
-
     # combine into large arrays
 
     grid = {}
@@ -520,6 +513,14 @@ def parse_grid(cfg, outdir='output/'):
     grid['redshift'] = cfg.z
     grid['Z'] = cfg.logZ
     grid['nH'] = cfg.lognH
+
+    # Read the incident continuum
+    contname = cfg.prefix + 'z{0:05.3f}_nuFnu.dat'.format(cfg.z[0])
+    energy, nuFnu, OccNum = np.loadtxt(contname, unpack=1)
+    nu = energy * Ryd / hplanck
+    fnu = nuFnu / nu
+    isort = energy.argsort()
+    cont = np.rec.fromarrays([energy[isort], fnu[isort]], names='ryd,fnu')
 
     # initialise keys that will contain one or more values for each
     # model.
@@ -666,9 +667,11 @@ def read_config(name):
     cfg.nproc = int(cfg.nproc)
     # cfg.z = float(cfg.z)
     for k in 'logNHI z logZ lognH'.split():
-        vmin, vmax, step = map(float, cfg[k].split())
-        cfg[k] = np.arange(vmin, vmax + 0.5*step, step)
-
+        try:
+            vmin, vmax, step = map(float, cfg[k].split())
+            cfg[k] = np.arange(vmin, vmax + 0.5*step, step)
+        except:
+            cfg[k] = np.array([np.float(cfg[k])])
     return cfg
 
 def main():
