@@ -650,8 +650,9 @@ def savehdf5(filename, M, overwrite=None):
         g = fh.create_group(k)
         for atom in M[k]:
             a = M[k][atom]
-            d = g.create_dataset(atom, a.shape, dtype=a.dtype,
+            d = g.create_dataset(atom, np.transpose(a.shape), dtype=a.dtype,
                                  compression='gzip')
+            print (np.shape(d[:]),np.shape(a))
             d[:] = a
 
     fh.close()
