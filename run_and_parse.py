@@ -551,7 +551,7 @@ def parse_grid(cfg, outdir='output/'):
         for key in ('N', 'Nex', 'gas_abun', 'dust_abun'):
             for atom in model[key]:
                 try:
-                    grid[key][atom].append(model[key][atom])
+                    grid[key][atom].append(np.transpose(model[key][atom]))
                 except:
                     import pdb; pdb.set_trace()
 
@@ -650,7 +650,7 @@ def savehdf5(filename, M, overwrite=None):
         g = fh.create_group(k)
         for atom in M[k]:
             a = M[k][atom]
-            d = g.create_dataset(atom, np.transpose(a.shape), dtype=a.dtype,
+            d = g.create_dataset(atom, a.shape, dtype=a.dtype,
                                  compression='gzip')
             print (np.shape(d[:]),np.shape(a))
             d[:] = a
@@ -699,10 +699,10 @@ def main():
     models = parse_grid(cfg)
 
     filename = cfg.prefix + '_grid.sav.gz'
-    print 'Writing to', filename
-    saveobj(filename, models, overwrite=cfg.overwrite)
     savehdf5(filename.replace('.sav.gz', '.hdf5'), models,
              overwrite=cfg.overwrite)
+    print 'Writing to', filename
+    saveobj(filename, models, overwrite=cfg.overwrite)
 
 
 def get_uvb(cfg,redshift):
