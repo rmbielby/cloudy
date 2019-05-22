@@ -551,7 +551,8 @@ def parse_grid(cfg, outdir='output/'):
         for key in ('N', 'Nex', 'gas_abun', 'dust_abun'):
             for atom in model[key]:
                 try:
-                    grid[key][atom].append(np.transpose(model[key][atom]))
+                    print np.shape(model[key][atom])
+                    grid[key][atom].append(model[key][atom])
                 except:
                     import pdb; pdb.set_trace()
 
@@ -563,18 +564,19 @@ def parse_grid(cfg, outdir='output/'):
     nnH  = len(cfg.lognH)
 
     for key in ('U', 'Tstop', 'filename'):
-        grid[key] = np.array(grid[key]).reshape(nNHI, nz, nZ, nnH)
+        grid[key] = np.array(grid[key]).reshape(nNHI, nz, nnH, nZ)
 
     for key in ('N', 'gas_abun', 'dust_abun'):
         for atom in grid[key]:
+            print np.shape(grid[key][atom])
             grid[key][atom] = np.array(grid[key][atom]).reshape(
-                nNHI, nz, nZ, nnH, -1)
+                nNHI, nz, nnH, nZ, -1)
 
     key = 'Tgas'
-    grid[key] = np.array(grid[key]).reshape(nNHI, nz, nZ, nnH, -1)
+    grid[key] = np.array(grid[key]).reshape(nNHI, nz, nnH, nZ, -1)
     key = 'Nex'
     for trans in grid[key]:
-        grid[key][trans] = np.array(grid[key][trans]).reshape(nNHI, nz, nZ, nnH)
+        grid[key][trans] = np.array(grid[key][trans]).reshape(nNHI, nz, nnH, nZ)
 
     # U values only vary with nH, so we don't need to keep a big grid
     # of them.
