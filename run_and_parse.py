@@ -242,9 +242,9 @@ def write_grid_input(cfg, fnu912=None, fluxfilename=None, table=None,
             if i ==0:
                 contname = cfg.prefix + 'z{0:05.3f}_nuFnu.dat'.format(z)
                 fnu912,fluxfilename = get_uvb(cfg,z)
-            for j,nH in enumerate(cfg.lognH):
-                for k,Z in enumerate(cfg.logZ):
-                    inname = '%02i_%02i_%02i_%02i.in' % (i, ii, j, k)
+            for k,Z in enumerate(cfg.logZ):
+                for j,nH in enumerate(cfg.lognH):
+                    inname = '%02i_%02i_%02i_%02i.in' % (i, ii, k, j)
                     outname = inname[:-3] + '.out'
                     write_input(indir + inname, z, NHI, Z, nH,
                                 fluxfilename=fluxfilename,
