@@ -564,19 +564,19 @@ def parse_grid(cfg, outdir='output/'):
     nnH  = len(cfg.lognH)
 
     for key in ('U', 'Tstop', 'filename'):
-        grid[key] = np.array(grid[key]).reshape(nNHI, nz, nnH, nZ)
+        grid[key] = np.array(grid[key]).reshape(nNHI, nz, nZ, nnH)
 
     for key in ('N', 'gas_abun', 'dust_abun'):
         for atom in grid[key]:
             print np.shape(grid[key][atom])
             grid[key][atom] = np.array(grid[key][atom]).reshape(
-                nNHI, nz, nnH, nZ, -1)
+                nNHI, nz, nZ, nnH, -1)
 
     key = 'Tgas'
-    grid[key] = np.array(grid[key]).reshape(nNHI, nz, nnH, nZ, -1)
+    grid[key] = np.array(grid[key]).reshape(nNHI, nz, nZ, nnH, -1)
     key = 'Nex'
     for trans in grid[key]:
-        grid[key][trans] = np.array(grid[key][trans]).reshape(nNHI, nz, nnH, nZ)
+        grid[key][trans] = np.array(grid[key][trans]).reshape(nNHI, nz, nZ, nnH)
 
     # U values only vary with nH, so we don't need to keep a big grid
     # of them.
